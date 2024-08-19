@@ -1,17 +1,18 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from moveit.task_constructor import core, stages
 from py_binding_tools import roscpp_init
 import time
 
-roscpp_init("mtc_tutorial_alternatives")
+roscpp_init("mtc_tutorial")
 
 # Use the joint interpolation planner
 jointPlanner = core.JointInterpolationPlanner()
 
 # Create a task
 task = core.Task()
+task.name = "alternatives"
 
 # Start from current robot state
 currentState = stages.CurrentState("current state")

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from moveit.task_constructor import core, stages
@@ -7,15 +7,16 @@ import time
 
 roscpp_init("mtc_tutorial")
 
-ompl_pipelinePlanner = core.PipelinePlanner("ompl")
-ompl_pipelinePlanner.planner = "RRTConnectkConfigDefault"
-pilz_pipelinePlanner = core.PipelinePlanner("pilz_industrial_motion_planner")
-pilz_pipelinePlanner.planner = "PTP"
+ompl_planner = core.PipelinePlanner("ompl")
+ompl_planner.planner = "RRTConnectkConfigDefault"
+pilz_planner = core.PipelinePlanner("pilz_industrial_motion_planner")
+pilz_planner.planner = "PTP"
 multiPlanner = core.MultiPlanner()
-multiPlanner.add(pilz_pipelinePlanner, ompl_pipelinePlanner)
+multiPlanner.add(pilz_planner, ompl_planner)
 
 # Create a task
 task = core.Task()
+task.name = "multi planner"
 
 # Start from current robot state
 currentState = stages.CurrentState("current state")
