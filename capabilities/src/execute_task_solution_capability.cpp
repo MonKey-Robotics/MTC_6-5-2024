@@ -118,6 +118,10 @@ void ExecuteTaskSolutionCapability::execCallback(
 		result->error_code = context_->plan_execution_->executeAndMonitor(plan);
 	}
 
+	while(!context_->trajectory_execution_manager_->checkExecCompleted()){
+		//wait until finish execution
+	}
+
 	if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
 		goal_handle->succeed(result);
 	else if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED && goal_handle->is_canceling())
