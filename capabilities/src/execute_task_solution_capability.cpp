@@ -86,6 +86,9 @@ ExecuteTaskSolutionCapability::ExecuteTaskSolutionCapability() : MoveGroupCapabi
 
 void ExecuteTaskSolutionCapability::initialize() {
 	// configure the action server
+
+	 auto node = context_->moveit_cpp_->getNode();
+
 	as_ = rclcpp_action::create_server<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
 	    context_->moveit_cpp_->getNode(), "execute_task_solution",
 	    ActionServerType::GoalCallback(std::bind(&ExecuteTaskSolutionCapability::handleNewGoal, this,
@@ -97,6 +100,43 @@ void ExecuteTaskSolutionCapability::initialize() {
 		        last_goal_future_ =
 		            std::async(std::launch::async, &ExecuteTaskSolutionCapability::execCallback, this, goal_handle);
 	        }));
+
+      // Initialize end_effector_link_
+	node->get_parameter_or("move_group.plan_execution.end_effector_link", end_effector_link_, std::string("shear_tip"));
+	// Initialize publisher for /planned_path
+	planned_path_pub_ = node->create_publisher<nav_msgs::msg::Path>("/planned_path", 10);
+	RCLCPP_INFO(LOGGER, "Initialized /planned_path publisher");
+}
+
+nav_msgs::msg::Path ExecuteTaskSolutionCapability::trajectoryToPath(
+    const robot_trajectory::RobotTrajectory& trajectory,
+    const std::string& link_name,
+    const std::string& frame_id) const
+
+{
+  nav_msgs::msg::Path path;
+  path.header.frame_id = frame_id; // Use the planning frame (e.g., world or base_link)
+  auto node = context_->moveit_cpp_->getNode();
+  path.header.stamp = node->get_clock()->now();
+
+  for (std::size_t i = 0; i < trajectory.getWayPointCount(); ++i) {
+    const moveit::core::RobotState& state = trajectory.getWayPoint(i);
+
+    // Compute forward kinematics for the specified link
+    const Eigen::Isometry3d& transform = state.getGlobalLinkTransform(link_name);
+    geometry_msgs::msg::PoseStamped pose;
+    pose.header = path.header;
+    pose.pose.position.x = transform.translation().x();
+    pose.pose.position.y = transform.translation().y();
+    pose.pose.position.z = transform.translation().z();
+    pose.pose.orientation.x = Eigen::Quaterniond(transform.rotation()).x();
+    pose.pose.orientation.y = Eigen::Quaterniond(transform.rotation()).y();
+    pose.pose.orientation.z = Eigen::Quaterniond(transform.rotation()).z();
+    pose.pose.orientation.w = Eigen::Quaterniond(transform.rotation()).w();
+    path.poses.push_back(pose);
+  }
+  return path;
+
 }
 
 void ExecuteTaskSolutionCapability::execCallback(
@@ -116,6 +156,30 @@ void ExecuteTaskSolutionCapability::execCallback(
 	else {
 		RCLCPP_INFO(LOGGER, "Executing TaskSolution");
 		result->error_code = context_->plan_execution_->executeAndMonitor(plan);
+		if (!plan.plan_components_.empty() && !end_effector_link_.empty() && plan.planning_scene_) {
+			std::string planning_frame = plan.planning_scene_->getPlanningFrame();
+			if (!planning_frame.empty()) {
+				for (const auto& component : plan.plan_components_) {
+					if (component.trajectory_ && !component.trajectory_->empty()) {
+						nav_msgs::msg::Path planned_path = trajectoryToPath(
+							*component.trajectory_, end_effector_link_, planning_frame);
+						if (!planned_path.poses.empty()) {
+							planned_path_pub_->publish(planned_path);
+							RCLCPP_INFO(LOGGER, "Published planned trajectory path with %zu poses to /planned_path",
+							planned_path.poses.size());
+
+						} else {
+							RCLCPP_WARN(LOGGER, "Planned path is empty for link '%s'", end_effector_link_.c_str());
+						}
+					}
+				}
+			} else {
+			RCLCPP_ERROR(LOGGER, "Planning frame is empty, cannot publish planned path");
+			}
+		} else {
+			RCLCPP_ERROR(LOGGER, "Cannot publish planned path: components_empty=%d, end_effector_link_empty=%d, planning_scene_null=%d",
+			plan.plan_components_.empty(), end_effector_link_.empty(), plan.planning_scene_ == nullptr);
+		}
 	}
 
 	while(!context_->trajectory_execution_manager_->checkExecCompleted()){

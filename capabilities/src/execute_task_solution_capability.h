@@ -45,6 +45,7 @@
 #include <rclcpp_action/rclcpp_action.hpp>
 
 #include <moveit_task_constructor_msgs/action/execute_task_solution.hpp>
+#include <nav_msgs/msg/path.hpp>
 
 #include <memory>
 
@@ -79,6 +80,14 @@ private:
 
 	ActionServerType::SharedPtr as_;
 	std::future<void> last_goal_future_;
+
+  std::string end_effector_link_; // Added for trajectoryToPath
+
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr planned_path_pub_; // Added for /planned_path
+
+  nav_msgs::msg::Path trajectoryToPath(const robot_trajectory::RobotTrajectory& trajectory,
+                                       const std::string& link_name,
+                                       const std::string& frame_id) const;
 };
 
 }  // namespace move_group
