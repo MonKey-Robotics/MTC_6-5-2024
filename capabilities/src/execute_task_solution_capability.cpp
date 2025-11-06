@@ -155,31 +155,9 @@ void ExecuteTaskSolutionCapability::execCallback(
 		result->error_code.val = moveit_msgs::msg::MoveItErrorCodes::INVALID_MOTION_PLAN;
 	else {
 		RCLCPP_INFO(LOGGER, "Executing TaskSolution");
+		// Note: Planned path publishing is now handled in plan_execution.cpp
+		// Each trajectory component's planned path is published when it starts executing
 		result->error_code = context_->plan_execution_->executeAndMonitor(plan);
-		if (!plan.plan_components_.empty() && !end_effector_link_.empty() && plan.planning_scene_) {
-			std::string planning_frame = plan.planning_scene_->getPlanningFrame();
-			if (!planning_frame.empty()) {
-				for (const auto& component : plan.plan_components_) {
-					if (component.trajectory_ && !component.trajectory_->empty()) {
-						nav_msgs::msg::Path planned_path = trajectoryToPath(
-							*component.trajectory_, end_effector_link_, planning_frame);
-						if (!planned_path.poses.empty()) {
-							planned_path_pub_->publish(planned_path);
-							RCLCPP_INFO(LOGGER, "Published planned trajectory path with %zu poses to /planned_path",
-							planned_path.poses.size());
-
-						} else {
-							RCLCPP_WARN(LOGGER, "Planned path is empty for link '%s'", end_effector_link_.c_str());
-						}
-					}
-				}
-			} else {
-			RCLCPP_ERROR(LOGGER, "Planning frame is empty, cannot publish planned path");
-			}
-		} else {
-			RCLCPP_ERROR(LOGGER, "Cannot publish planned path: components_empty=%d, end_effector_link_empty=%d, planning_scene_null=%d",
-			plan.plan_components_.empty(), end_effector_link_.empty(), plan.planning_scene_ == nullptr);
-		}
 	}
 
 	while(!context_->trajectory_execution_manager_->checkExecCompleted()){
