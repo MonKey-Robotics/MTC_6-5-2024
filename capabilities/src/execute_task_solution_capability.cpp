@@ -160,16 +160,24 @@ void ExecuteTaskSolutionCapability::execCallback(
 		result->error_code = context_->plan_execution_->executeAndMonitor(plan);
 	}
 
-	while(!context_->trajectory_execution_manager_->checkExecCompleted()){
+	while(!context_->trajectory_execution_manager_->PostcheckExecCompleted()){ //depend on execution_complete_
 		//wait until finish execution
 	}
-
-	if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS)
+	// RCLCPP_INFO(LOGGER, "Finishing TaskSolution !!!!!!!!!!!!!!!!!!!!!!!!!");
+	result->error_code = context_->plan_execution_->checkMoveitError();
+	if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS){
 		goal_handle->succeed(result);
-	else if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED && goal_handle->is_canceling())
+	}
+	else if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::GOAL_IN_COLLISION){
+		goal_handle->succeed(result);
+	}
+	else if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED && goal_handle->is_canceling()){
 		goal_handle->canceled(result);
-	else
+	}
+	else{
 		goal_handle->abort(result);
+	}
+
 }
 
 rclcpp_action::CancelResponse ExecuteTaskSolutionCapability::preemptCallback(
