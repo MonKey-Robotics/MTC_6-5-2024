@@ -44,6 +44,8 @@
 #include <moveit/robot_state/conversions.h>
 #include <moveit/utils/message_checks.h>
 #include <fmt/format.h>
+#include <chrono>
+#include <thread>
 
 namespace {
 
@@ -160,8 +162,27 @@ void ExecuteTaskSolutionCapability::execCallback(
 		result->error_code = context_->plan_execution_->executeAndMonitor(plan);
 	}
 
+	// bounded wait with sleep instead of a hot spin: with the joinable monitor thread, executeAndMonitor()
+	// already returns after execution finished, so this normally exits on the first iteration. The deadline
+	// (> the 120 s monitor backstop) is a safety net so the action ALWAYS returns a result to the caller.
+	const auto postcheck_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(180);
+	bool postcheck_timed_out = false;
 	while(!context_->trajectory_execution_manager_->PostcheckExecCompleted()){ //depend on execution_complete_
 		//wait until finish execution
+		if (std::chrono::steady_clock::now() > postcheck_deadline) {
+			postcheck_timed_out = true;
+			break;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	}
+	if (postcheck_timed_out) {
+		RCLCPP_ERROR(LOGGER, "Timed out waiting for trajectory execution to complete - aborting goal so the "
+		                     "caller is not stuck waiting forever");
+		context_->plan_execution_->stop();
+		context_->trajectory_execution_manager_->stopExecution(true, false);
+		result->error_code.val = moveit_msgs::msg::MoveItErrorCodes::TIMED_OUT;
+		goal_handle->abort(result);
+		return;
 	}
 	// RCLCPP_INFO(LOGGER, "Finishing TaskSolution !!!!!!!!!!!!!!!!!!!!!!!!!");
 	RCLCPP_ERROR(LOGGER, "DEBUG: About to call checkMoveitError()");
