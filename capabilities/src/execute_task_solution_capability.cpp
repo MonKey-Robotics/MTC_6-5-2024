@@ -185,23 +185,23 @@ void ExecuteTaskSolutionCapability::execCallback(
 		return;
 	}
 	// RCLCPP_INFO(LOGGER, "Finishing TaskSolution !!!!!!!!!!!!!!!!!!!!!!!!!");
-	RCLCPP_ERROR(LOGGER, "DEBUG: About to call checkMoveitError()");
+	RCLCPP_DEBUG(LOGGER, "DEBUG: About to call checkMoveitError()");
 	result->error_code = context_->plan_execution_->checkMoveitError();
-	RCLCPP_ERROR(LOGGER, "DEBUG: After checkMoveitError(), result->error_code.val = %d", result->error_code.val);
+	RCLCPP_DEBUG(LOGGER, "DEBUG: After checkMoveitError(), result->error_code.val = %d", result->error_code.val);
 	if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS){
-		RCLCPP_ERROR(LOGGER, "DEBUG: Calling goal_handle->succeed() with error_code = %d", result->error_code.val);
+		RCLCPP_DEBUG(LOGGER, "DEBUG: Calling goal_handle->succeed() with error_code = %d", result->error_code.val);
 		goal_handle->succeed(result);
 	}
 	else if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::GOAL_IN_COLLISION){
-		RCLCPP_ERROR(LOGGER, "DEBUG: Calling goal_handle->succeed() (GOAL_IN_COLLISION) with error_code = %d", result->error_code.val);
+		RCLCPP_DEBUG(LOGGER, "DEBUG: Calling goal_handle->succeed() (GOAL_IN_COLLISION) with error_code = %d", result->error_code.val);
 		goal_handle->succeed(result);
 	}
 	else if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED && goal_handle->is_canceling()){
-		RCLCPP_ERROR(LOGGER, "DEBUG: Calling goal_handle->canceled() with error_code = %d", result->error_code.val);
+		RCLCPP_DEBUG(LOGGER, "DEBUG: Calling goal_handle->canceled() with error_code = %d", result->error_code.val);
 		goal_handle->canceled(result);
 	}
 	else{
-		RCLCPP_ERROR(LOGGER, "DEBUG: Calling goal_handle->abort() with error_code = %d", result->error_code.val);
+		RCLCPP_DEBUG(LOGGER, "DEBUG: Calling goal_handle->abort() with error_code = %d", result->error_code.val);
 		goal_handle->abort(result);
 	}
 
