@@ -304,21 +304,21 @@ moveit::core::MoveItErrorCode Task::execute(const SolutionBase& s) {
 	}
 
 	auto result = result_future.get();
-	RCLCPP_ERROR(node->get_logger(), "DEBUG: Received result.code = %d (SUCCEEDED=%d, ABORTED=%d, CANCELED=%d)",
-	            static_cast<int>(result.code),
-	            static_cast<int>(rclcpp_action::ResultCode::SUCCEEDED),
-	            static_cast<int>(rclcpp_action::ResultCode::ABORTED),
-	            static_cast<int>(rclcpp_action::ResultCode::CANCELED));
-	RCLCPP_ERROR(node->get_logger(), "DEBUG: result.result->error_code.val = %d", result.result->error_code.val);
+	// RCLCPP_ERROR(node->get_logger(), "DEBUG: Received result.code = %d (SUCCEEDED=%d, ABORTED=%d, CANCELED=%d)",
+	//             static_cast<int>(result.code),
+	//             static_cast<int>(rclcpp_action::ResultCode::SUCCEEDED),
+	//             static_cast<int>(rclcpp_action::ResultCode::ABORTED),
+	//             static_cast<int>(rclcpp_action::ResultCode::CANCELED));
+	// RCLCPP_ERROR(node->get_logger(), "DEBUG: result.result->error_code.val = %d", result.result->error_code.val);
 	if (result.code != rclcpp_action::ResultCode::SUCCEEDED) {
 		RCLCPP_ERROR(node->get_logger(), "Goal was aborted or canceled");
-		RCLCPP_ERROR(node->get_logger(), "DEBUG: Returning actual error_code.val = %d (was returning default FAILURE = %d)",
-		            result.result->error_code.val, error_code.val);
+		// RCLCPP_ERROR(node->get_logger(), "DEBUG: Returning actual error_code.val = %d (was returning default FAILURE = %d)",
+		//             result.result->error_code.val, error_code.val);
 		// BUG FIX: Return the actual error code from the action result, not the default FAILURE (99999)
 		return result.result->error_code;
 	}
 
-	RCLCPP_ERROR(node->get_logger(), "DEBUG: Goal succeeded, returning result.result->error_code.val = %d", result.result->error_code.val);
+	// RCLCPP_ERROR(node->get_logger(), "DEBUG: Goal succeeded, returning result.result->error_code.val = %d", result.result->error_code.val);
 	return result.result->error_code;
 }
 
