@@ -103,42 +103,6 @@ void ExecuteTaskSolutionCapability::initialize() {
 		            std::async(std::launch::async, &ExecuteTaskSolutionCapability::execCallback, this, goal_handle);
 	        }));
 
-      // Initialize end_effector_link_
-	node->get_parameter_or("move_group.plan_execution.end_effector_link", end_effector_link_, std::string("shear_tip"));
-	// Initialize publisher for /planned_path
-	planned_path_pub_ = node->create_publisher<nav_msgs::msg::Path>("/planned_path", 10);
-	RCLCPP_INFO(LOGGER, "Initialized /planned_path publisher");
-}
-
-nav_msgs::msg::Path ExecuteTaskSolutionCapability::trajectoryToPath(
-    const robot_trajectory::RobotTrajectory& trajectory,
-    const std::string& link_name,
-    const std::string& frame_id) const
-
-{
-  nav_msgs::msg::Path path;
-  path.header.frame_id = frame_id; // Use the planning frame (e.g., world or base_link)
-  auto node = context_->moveit_cpp_->getNode();
-  path.header.stamp = node->get_clock()->now();
-
-  for (std::size_t i = 0; i < trajectory.getWayPointCount(); ++i) {
-    const moveit::core::RobotState& state = trajectory.getWayPoint(i);
-
-    // Compute forward kinematics for the specified link
-    const Eigen::Isometry3d& transform = state.getGlobalLinkTransform(link_name);
-    geometry_msgs::msg::PoseStamped pose;
-    pose.header = path.header;
-    pose.pose.position.x = transform.translation().x();
-    pose.pose.position.y = transform.translation().y();
-    pose.pose.position.z = transform.translation().z();
-    pose.pose.orientation.x = Eigen::Quaterniond(transform.rotation()).x();
-    pose.pose.orientation.y = Eigen::Quaterniond(transform.rotation()).y();
-    pose.pose.orientation.z = Eigen::Quaterniond(transform.rotation()).z();
-    pose.pose.orientation.w = Eigen::Quaterniond(transform.rotation()).w();
-    path.poses.push_back(pose);
-  }
-  return path;
-
 }
 
 void ExecuteTaskSolutionCapability::execCallback(
@@ -189,27 +153,16 @@ void ExecuteTaskSolutionCapability::execCallback(
 		goal_handle->abort(result);
 		return;
 	}
-	// RCLCPP_INFO(LOGGER, "Finishing TaskSolution !!!!!!!!!!!!!!!!!!!!!!!!!");
-	RCLCPP_DEBUG(LOGGER, "DEBUG: About to call checkMoveitError()");
 	result->error_code = context_->plan_execution_->checkMoveitError();
-	RCLCPP_DEBUG(LOGGER, "DEBUG: After checkMoveitError(), result->error_code.val = %d", result->error_code.val);
-	if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS){
-		RCLCPP_DEBUG(LOGGER, "DEBUG: Calling goal_handle->succeed() with error_code = %d", result->error_code.val);
+	if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::SUCCESS) {
 		goal_handle->succeed(result);
 	}
-	else if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::GOAL_IN_COLLISION){
-		RCLCPP_DEBUG(LOGGER, "DEBUG: Calling goal_handle->succeed() (GOAL_IN_COLLISION) with error_code = %d", result->error_code.val);
-		goal_handle->succeed(result);
-	}
-	else if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED && goal_handle->is_canceling()){
-		RCLCPP_DEBUG(LOGGER, "DEBUG: Calling goal_handle->canceled() with error_code = %d", result->error_code.val);
+	else if (result->error_code.val == moveit_msgs::msg::MoveItErrorCodes::PREEMPTED && goal_handle->is_canceling()) {
 		goal_handle->canceled(result);
 	}
-	else{
-		RCLCPP_DEBUG(LOGGER, "DEBUG: Calling goal_handle->abort() with error_code = %d", result->error_code.val);
+	else {
 		goal_handle->abort(result);
 	}
-
 }
 
 rclcpp_action::CancelResponse ExecuteTaskSolutionCapability::preemptCallback(

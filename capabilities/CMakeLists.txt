@@ -15,7 +15,6 @@ find_package(moveit_task_constructor_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(nav_msgs REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
    src/execute_task_solution_capability.cpp
@@ -29,7 +28,6 @@ ament_target_dependencies(${PROJECT_NAME}
                           moveit_ros_planning
                           moveit_task_constructor_core
                           moveit_task_constructor_msgs
-                          nav_msgs
 )
 
 install(TARGETS ${PROJECT_NAME}
@@ -45,6 +43,5 @@ ament_export_dependencies(moveit_task_constructor_msgs)
 ament_export_dependencies(pluginlib)
 ament_export_dependencies(rclcpp_action)
 ament_export_dependencies(std_msgs)
-ament_export_dependencies(nav_msgs)
 
 ament_package()
