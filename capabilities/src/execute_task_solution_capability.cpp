@@ -153,14 +153,19 @@ void ExecuteTaskSolutionCapability::execCallback(
 	}
 
 	plan_execution::ExecutableMotionPlan plan;
-	if (!constructMotionPlan(goal->solution, plan))
+	if (!constructMotionPlan(goal->solution, plan)) {
+		// Abort here: falling through would let checkMoveitError() overwrite this with the
+		// PREVIOUS execution's status and report a never-executed plan as SUCCESS.
+		RCLCPP_ERROR(LOGGER, "Failed to construct motion plan from task solution - aborting goal");
 		result->error_code.val = moveit_msgs::msg::MoveItErrorCodes::INVALID_MOTION_PLAN;
-	else {
-		RCLCPP_INFO(LOGGER, "Executing TaskSolution");
-		// Note: Planned path publishing is now handled in plan_execution.cpp
-		// Each trajectory component's planned path is published when it starts executing
-		result->error_code = context_->plan_execution_->executeAndMonitor(plan);
+		goal_handle->abort(result);
+		return;
 	}
+
+	RCLCPP_INFO(LOGGER, "Executing TaskSolution");
+	// Note: Planned path publishing is now handled in plan_execution.cpp
+	// Each trajectory component's planned path is published when it starts executing
+	result->error_code = context_->plan_execution_->executeAndMonitor(plan);
 
 	// bounded wait with sleep instead of a hot spin: with the joinable monitor thread, executeAndMonitor()
 	// already returns after execution finished, so this normally exits on the first iteration. The deadline
