@@ -228,7 +228,12 @@ void setExpanded(QTreeView* view, const QModelIndex& index, bool expand, int dep
 TaskViewPrivate::TaskViewPrivate(TaskView* view) : q_ptr(view) {
 	setupUi(view);
 
-	node_ = rclcpp::Node::make_shared("task_view_private", "");
+	// use_global_arguments(false): the host process (rviz2) is typically launched with a
+	// global `-r __node:=<name>` remap; inheriting it would rename this helper to the
+	// host's own node name and register a duplicate same-named graph entry.
+	rclcpp::NodeOptions task_view_options;
+	task_view_options.use_global_arguments(false);
+	node_ = rclcpp::Node::make_shared("task_view_private", "", task_view_options);
 	exec_action_client_ = rclcpp_action::create_client<moveit_task_constructor_msgs::action::ExecuteTaskSolution>(
 	    node_, "execute_task_solution");
 
